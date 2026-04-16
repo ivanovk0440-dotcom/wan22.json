@@ -21,7 +21,6 @@ def start_comfy():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL
         )
-        # Ждём готовности ComfyUI
         for i in range(30):
             try:
                 requests.get("http://localhost:8188", timeout=2)
@@ -148,7 +147,7 @@ def handler(job):
     
     # 6. Ждём результат (до 20 минут)
     print("🎬 Waiting for video generation...")
-    for _ in range(600):  # 600 * 2 = 1200 секунд = 20 минут
+    for _ in range(600):
         time.sleep(2)
         try:
             history_resp = requests.get(f"http://localhost:8188/history/{prompt_id}", timeout=10)
@@ -158,14 +157,12 @@ def handler(job):
                     outputs = history[prompt_id].get('outputs', {})
                     
                     for node_id, node_output in outputs.items():
-                        # Ищем видео в SaveVideo ноде
                         if 'videos' in node_output and node_output['videos']:
                             video = node_output['videos'][0]
                             video_url = f"http://localhost:8188/view?filename={video['filename']}&type=output"
                             print(f"🎉 Video generated! URL: {video_url}")
                             return {"status": "completed", "video_url": video_url}
                         
-                        # Ищем изображение в SaveImage ноде
                         if 'images' in node_output and node_output['images']:
                             img = node_output['images'][0]
                             img_url = f"http://localhost:8188/view?filename={img['filename']}&type=output"
@@ -174,7 +171,6 @@ def handler(job):
         except Exception as e:
             print(f"⚠️ Error checking status: {e}")
     
-    # 7. Таймаут
     return {"error": "Generation timeout (20 minutes)"}
 
 # ============================================
