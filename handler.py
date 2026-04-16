@@ -34,7 +34,7 @@ def start_comfy():
     return True
 
 # ============================================
-# ЗАГРУЗКА WORKFLOW
+# ЗАГРУЗКА WORKFLOW (UI-ФОРМАТ)
 # ============================================
 
 def load_workflow():
@@ -44,6 +44,25 @@ def load_workflow():
         with open(workflow_path, 'r', encoding='utf-8') as f:
             workflow = json.load(f)
             print(f"✅ Workflow loaded from {workflow_path}")
+            
+            # Диагностика структуры
+            print(f"📋 Тип workflow: {type(workflow)}")
+            if isinstance(workflow, dict):
+                print(f"📋 Ключи верхнего уровня: {list(workflow.keys())}")
+                
+                if 'nodes' in workflow:
+                    print(f"📋 Найдено nodes: {len(workflow['nodes'])} нод")
+                    # Ищем ноды 134 и 148
+                    for node in workflow['nodes']:
+                        if node.get('id') in [134, 148]:
+                            print(f"🔍 Найдена нода {node.get('id')}: {node.get('type')}")
+                else:
+                    print(f"📋 Нет ключа 'nodes', ищем прямые ID")
+                    if '134' in workflow:
+                        print(f"🔍 Найдена нода 134: {workflow['134'].get('class_type')}")
+                    if '148' in workflow:
+                        print(f"🔍 Найдена нода 148: {workflow['148'].get('class_type')}")
+            
             return workflow
     except FileNotFoundError:
         print(f"❌ Workflow file not found at {workflow_path}")
@@ -53,34 +72,36 @@ def load_workflow():
         raise
 
 def update_prompt(workflow, text):
-    """Обновляет промпт в ноде 134 (API-формат)"""
-    if "134" in workflow and "inputs" in workflow["134"]:
-        workflow["134"]["inputs"]["text"] = text
-        print(f"✅ Prompt updated in node 134: {text[:50]}...")
-        return workflow
-    # Если нет ноды 134, ищем по class_type
-    for node_id, node in workflow.items():
-        if isinstance(node, dict) and node.get('class_type') == 'CLIPTextEncode':
-            if 'inputs' in node and 'text' in node['inputs']:
-                workflow[node_id]['inputs']['text'] = text
-                print(f"✅ Prompt updated in node {node_id}")
+    """Обновляет промпт в ноде 134 (UI-формат)"""
+    if 'nodes' in workflow:
+        for node in workflow['nodes']:
+            if node.get('id') == 134 and node.get('type') == 'CLIPTextEncode':
+                node['widgets_values'] = [text]
+                print(f"✅ Prompt updated in node 134: {text[:50]}...")
                 return workflow
-    raise Exception("CLIPTextEncode node not found")
+    # Альтернативный поиск (если API-формат)
+    elif "134" in workflow:
+        workflow["134"]["inputs"]["text"] = text
+        print(f"✅ Prompt updated in node 134 (API format)")
+        return workflow
+    
+    raise Exception("CLIPTextEncode node 134 not found")
 
 def update_image(workflow, filename):
-    """Обновляет имя файла в ноде 148 (API-формат)"""
-    if "148" in workflow and "inputs" in workflow["148"]:
-        workflow["148"]["inputs"]["image"] = filename
-        print(f"✅ Image updated in node 148: {filename}")
-        return workflow
-    # Если нет ноды 148, ищем по class_type
-    for node_id, node in workflow.items():
-        if isinstance(node, dict) and node.get('class_type') == 'LoadImage':
-            if 'inputs' in node and 'image' in node['inputs']:
-                workflow[node_id]['inputs']['image'] = filename
-                print(f"✅ Image updated in node {node_id}")
+    """Обновляет имя файла в ноде 148 (UI-формат)"""
+    if 'nodes' in workflow:
+        for node in workflow['nodes']:
+            if node.get('id') == 148 and node.get('type') == 'LoadImage':
+                node['widgets_values'] = [filename, "image"]
+                print(f"✅ Image updated in node 148: {filename}")
                 return workflow
-    raise Exception("LoadImage node not found")
+    # Альтернативный поиск (если API-формат)
+    elif "148" in workflow:
+        workflow["148"]["inputs"]["image"] = filename
+        print(f"✅ Image updated in node 148 (API format)")
+        return workflow
+    
+    raise Exception("LoadImage node 148 not found")
 
 # ============================================
 # ОСНОВНОЙ ХЕНДЛЕР
